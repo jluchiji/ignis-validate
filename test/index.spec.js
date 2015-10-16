@@ -64,10 +64,10 @@ describe('factory(2)', function() {
 describe('extension(1)', function() {
 
   it('should mount the extension', function() {
-    Ignis.use(target);
+    this.ignis = new Ignis()
+    this.ignis.use(target);
 
-    var ignis = Ignis(null);
-    expect(ignis.factories[0]).to.be.a('function');
+    expect(this.ignis.factories[0]).to.be.a('function');
   });
 
 });

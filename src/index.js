@@ -34,6 +34,6 @@ export function factory(ignis, meta) {
  *
  * @param          {ignis}     Ignis instance.
  */
-export default function extension(Ignis) {
-  Ignis.init(function() { this.factories.push(factory); });
+export default function extension(ignis) {
+  ignis.pre.push(factory);
 }
