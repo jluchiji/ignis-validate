@@ -6,34 +6,32 @@
  */
 
 import _           from 'lodash';
+import Ignis       from 'ignis';
 import JsonSchema  from 'express-jsonschema';
 
 
-/**
- * factory(2)
- *
- * @param          {ignis}     Ignis instance.
- * @param          {meta}      Configuration metadata.
- * @returns        {Function}  Ignis.js middleware factory.
- */
-export function factory(ignis, meta) {
-  let schema = meta.schema || meta.validation || meta.validate;
-  if (!schema) { return null; }
+@Ignis.Service.deps('http')
+export default class ValidationService extends Ignis.Service {
 
-  let check  = _.curry(_.has)(schema);
-  if (!check('body') && !check('query') && !check('params')) {
-    schema = { body: schema };
+  async init(http) {
+    http.pre(this.factory);
   }
 
-  return JsonSchema.validate(schema);
-}
 
+  /**
+   * Validation middleware factory
+   */
+  factory(ignis, meta) {
+    let schema = meta.schema;
+    if (!schema) { return null; }
 
-/**
- * extension(1)
- *
- * @param          {ignis}     Ignis instance.
- */
-export default function extension(ignis) {
-  ignis.pre.push(factory);
+    /* Default to validating body */
+    const check = _.partial(_.has, schema);
+    if (!check('body') && !check('query') && !check('params')) {
+      schema = { body: schema };
+    }
+
+    return JsonSchema.validate(schema);
+  }
+
 }

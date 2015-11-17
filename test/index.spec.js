@@ -4,70 +4,92 @@
  * @author  Denis Luchkin-Zhou <denis@ricepo.com>
  * @license MIT
  */
-/* jshint -W030 */
+'use strict';
 
-var Sinon          = require('sinon');
-var Chai           = require('chai');
-var JsonSchema     = require('express-jsonschema');
-var expect         = Chai.expect;
-
-var Ignis          = require('ignis');
-
+const Chai         = require('chai');
 Chai.use(require('sinon-chai'));
+Chai.use(require('chai-as-promised'));
 
-var target         = require('../lib');
+/*!
+ * Setup global stuff here.
+ */
+global.co          = require('bluebird').coroutine;
+global.expect      = Chai.expect;
+global.Sinon       = require('sinon');
 
-describe('factory(2)', function() {
+/*!
+ * Start tests.
+ */
+const Ignis = require('ignis');
+const JsonSchema = require('express-jsonschema');
+const ValidationService = require('../lib');
 
-  before(function() { JsonSchema._validate = JsonSchema.validate; });
-  after(function() { JsonSchema.validate = JsonSchema._validate; });
+before(function() { JsonSchema._validate = JsonSchema.validate; });
+after(function() { JsonSchema.validate = JsonSchema._validate; });
 
-  beforeEach(function() {
-    this.validate = Sinon.spy(JsonSchema._validate);
-    JsonSchema.validate = this.validate;
-  });
+beforeEach(co(function*() {
+  this.cb = Sinon.spy(JsonSchema._validate);
+  JsonSchema.validate = this.cb;
+
+  Ignis.reset();
+  this.ignis = Ignis();
+  this.ignis.use(ValidationService);
+
+  yield this.ignis.init();
+
+  this.validate = this.ignis.service('validation');
+}));
+
+describe('init()', function() {
+
+  it('should push a pre-handler factory', co(function*() {
+    yield this.ignis.init();
+
+    const pre = this.ignis.service('http')[Ignis.Http.$$pre];
+    expect(pre)
+      .to.have.length(1);
+    expect(pre[0])
+      .to.equal(this.validate.factory);
+  }));
+
+});
+
+describe('factory(ignis, meta)', function() {
 
   it('should create a new middleware function', function() {
-    var arg0 = Object.create(null);
-    var arg1 = { body: { foo: 'bar' } };
+    const arg0 = { };
+    const arg1 = { body: { foo: 'bar' } };
 
-    var mware = target.factory(arg0, { validate: arg1 });
+    const mw = this.validate.factory(arg0, { schema: arg1 });
 
-    expect(mware).to.be.a('function');
-    expect(this.validate)
-      .to.be.calledOnce.and
+    expect(mw)
+      .to.be.a('function');
+    expect(this.cb)
+      .to.be.calledOnce
       .to.be.calledWith(arg1);
   });
 
   it('should not create a middleware if there is no schema', function() {
-    var mware = target.factory({ }, { });
-    expect(mware).to.be.null;
+    let mw = this.validate.factory({ }, { });
+    expect(mw)
+      .to.be.null;
 
-    mware = target.factory({ }, { validate: null });
-    expect(mware).to.be.null;
+    mw = this.validate.factory({ }, { schema: null });
+    expect(mw)
+      .to.be.null;
   });
 
   it('should default to applying schema to body', function() {
-    var arg0 = Object.create(null);
-    var arg1 = { foo: 'bar' };
+    const arg0 = { };
+    const arg1 = { foo: 'bar' };
 
-    var mware = target.factory(arg0, { validate: arg1 });
+    const mw = this.validate.factory(arg0, { schema: arg1 });
 
-    expect(mware).to.be.a('function');
-    expect(this.validate)
-      .to.be.calledOnce.and
+    expect(mw)
+      .to.be.a('function');
+    expect(this.cb)
+      .to.be.calledOnce
       .to.be.calledWith({ body: arg1 });
-  });
-
-});
-
-describe('extension(1)', function() {
-
-  it('should mount the extension', function() {
-    this.ignis = new Ignis()
-    this.ignis.use(target);
-
-    expect(this.ignis.factories[0]).to.be.a('function');
   });
 
 });
