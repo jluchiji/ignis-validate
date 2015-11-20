@@ -7,7 +7,11 @@
 
 import _           from 'lodash';
 import Ignis       from 'ignis';
+import Optional    from 'optional';
 import JsonSchema  from 'express-jsonschema';
+
+/* Optionally support Schematik instances */
+const Schematik = Optional('schematik');
 
 
 @Ignis.Service.deps('http')
@@ -37,6 +41,17 @@ export default class ValidationService extends Ignis.Service {
     }
 
     return JsonSchema.validate(schema);
+  }
+
+
+  /**
+   * @static (decorator) HTTP Endpoint's validation schema.
+   */
+  @Ignis.Service.export({ static: true })
+  static schema(schema) {
+    /* Convert Schematik instances into JSON Schema */
+    if (Schematik && schema instanceof Schematik) { schema = schema.done(); }
+    return Ignis.Http.Endpoint.option('schema', schema);
   }
 
 }
