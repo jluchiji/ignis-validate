@@ -18,6 +18,11 @@ export default class ValidationService extends Ignis.Service {
   }
 
 
+  postinit() {
+    /* Provide a shortcut decorator */
+    Ignis.Http.Endpoint.schema = _.partial(Ignis.Http.Endpoint.option, 'schema');
+  }
+
   /**
    * Validation middleware factory
    */
