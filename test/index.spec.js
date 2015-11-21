@@ -33,6 +33,7 @@ beforeEach(co(function*() {
 
   Ignis.reset();
   this.ignis = Ignis();
+  this.ignis.use(Ignis.Http);
   this.ignis.use(ValidationService);
 
   yield this.ignis.init();
